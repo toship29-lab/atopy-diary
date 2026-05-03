@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="アトピー日記">
+<title>アトピー日記</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --green-dark: #2d5a45;
+    --green-mid: #4a8a68;
+    --green-light: #e8f5ee;
+    --amber: #c07a3a;
+    --amber-light: #fff8f0;
+    --red: #e05555;
+    --bg: #f7f5f2;
+    --white: #ffffff;
+    --border: #e4dfd8;
+    --text: #2c2c2c;
+    --text-mid: #666;
+    --text-soft: #aaa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(160deg, #e8f5ee 0%, #fff9f2 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .header-icon { font-size: 28px; }
+  .header-title { font-size: 18px; font-weight: 800; color: var(--green-dark); letter-spacing: -0.5px; }
+  .header-sub { font-size: 11px; color: var(--green-mid); margin-top: 1px; }
+  .header-count { margin-left: auto; text-align: right; }
+  .header-count-num { font-size: 22px; font-weight: 800; color: var(--green-dark); }
+  .header-count-label { font-size: 10px; color: var(--text-soft); }
+
+  /* Tabs */
+  .tabs { display: flex; }
+  .tab {
+    flex: 1; padding: 10px 0; font-size: 13px; font-weight: 400;
+    border: none; background: transparent; color: var(--text-soft);
+    border-bottom: 2.5px solid transparent; cursor: pointer;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .tab.active { font-weight: 700; color: var(--green-dark); border-bottom-color: var(--green-dark); }
+
+  /* Pages */
+  .page { display: none; padding: 20px 16px; }
+  .page.active { display: block; }
+
+  /* Section */
+  .section { margin-bottom: 18px; }
+  .section-label {
+    font-size: 11px; font-weight: 700; color: var(--green-mid);
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px;
+  }
+
+  /* Date picker */
+  .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .date-input {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 10px 14px; font-size: 14px; background: var(--white);
+    color: var(--text); outline: none; font-family: inherit;
+  }
+  .badge {
+    font-size: 11px; color: var(--text-soft); background: #f0f0f0;
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+  }
+
+  /* Condition buttons */
+  .condition-grid { display: flex; gap: 8px; }
+  .cond-btn {
+    flex: 1; padding: 10px 0; border-radius: 14px;
+    border: 2px solid var(--border); background: var(--white);
+    cursor: pointer; transition: all 0.15s; display: flex;
+    flex-direction: column; align-items: center; gap: 3;
+  }
+  .cond-btn .emoji { font-size: 22px; }
+  .cond-btn .num { font-size: 9px; color: var(--text-soft); font-weight: 700; }
+  .cond-badge {
+    margin-top: 10px; padding: 9px 14px; border-radius: 12px;
+    font-size: 13px; font-weight: 700; text-align: center;
+  }
+
+  /* Chip groups */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    padding: 7px 13px; border-radius: 20px; font-size: 12px;
+    border: 1.5px solid var(--border); background: var(--white);
+    color: var(--text-mid); cursor: pointer; transition: all 0.15s;
+    font-family: inherit;
+  }
+  .chip.selected-green { border-color: var(--green-mid); background: #e8f5ee; color: var(--green-dark); font-weight: 700; }
+  .chip.selected-amber { border-color: var(--amber); background: #fff4e8; color: var(--amber); font-weight: 700; }
+
+  /* Grid 2 cols */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .mini-options { display: flex; flex-direction: column; gap: 6px; }
+  .mini-btn {
+    padding: 8px 10px; border-radius: 10px; font-size: 12px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; text-align: left; font-family: inherit; color: var(--text);
+    transition: all 0.15s;
+  }
+  .mini-btn.active { border-color: var(--green-mid); background: #e8f5ee; color: var(--green-dark); font-weight: 700; }
+
+  /* Memo */
+  .memo-input {
+    width: 100%; min-height: 80px; border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; font-size: 13px;
+    color: var(--text); background: var(--white); resize: vertical;
+    outline: none; font-family: inherit;
+  }
+
+  /* Save button */
+  .save-btn {
+    width: 100%; padding: 15px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+    color: #fff; font-size: 15px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(45,90,69,0.28); transition: all 0.2s;
+    font-family: inherit; letter-spacing: 0.3px;
+  }
+  .save-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+  .save-btn.saved { background: #4ade80; box-shadow: none; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--white); border-radius: 14px; padding: 14px 10px;
+    text-align: center; border: 1px solid var(--border);
+  }
+  .stat-label { font-size: 10px; color: var(--text-soft); margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 800; }
+  .stat-unit { font-size: 10px; font-weight: 400; color: var(--text-soft); }
+
+  /* Chart cards */
+  .chart-card {
+    background: var(--white); border-radius: 16px; padding: 16px 14px;
+    margin-bottom: 14px; border: 1px solid var(--border);
+  }
+  .chart-title { font-size: 12px; font-weight: 800; color: var(--green-dark); margin-bottom: 12px; }
+  .chart-note { font-size: 11px; color: var(--text-soft); text-align: center; margin-top: 6px; }
+
+  /* Records list */
+  .record-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 13px 0; border-bottom: 1px solid #f2ede8;
+  }
+  .rec-date { width: 40px; text-align: center; flex-shrink: 0; }
+  .rec-day { font-size: 10px; color: var(--text-soft); }
+  .rec-datenum { font-size: 14px; font-weight: 700; color: var(--text-mid); }
+  .rec-emoji { font-size: 24px; flex-shrink: 0; }
+  .rec-detail { flex: 1; min-width: 0; }
+  .rec-status { font-size: 13px; font-weight: 700; }
+  .rec-tags { font-size: 11px; color: var(--text-soft); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec-memo { font-size: 11px; color: var(--text-soft); font-style: italic; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-soft); }
+  .empty-icon { font-size: 52px; margin-bottom: 14px; }
+  .empty-text { font-size: 14px; margin-bottom: 6px; }
+  .empty-sub { font-size: 12px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--green-dark); color: #fff; padding: 10px 22px;
+    border-radius: 30px; font-size: 13px; font-weight: 700;
+    opacity: 0; transition: all 0.3s; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Export */
+  .export-btn {
+    width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border);
+    background: var(--white); color: var(--text-mid); font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit; margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="header-icon">🌿</div>
+    <div>
+      <div class="header-title">アトピー日記</div>
+      <div class="header-sub">毎日の肌状態を記録・振り返り</div>
+    </div>
+    <div class="header-count">
+      <div class="header-count-label">記録</div>
+      <div class="header-count-num"><span id="totalDays">0</span><span style="font-size:11px;font-weight:400">日</span></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(0)">記録する</button>
+    <button class="tab" onclick="switchTab(1)">グラフ</button>
+    <button class="tab" onclick="switchTab(2)">振り返り</button>
+  </div>
+</div>
+
+<!-- TAB 0: 記録 -->
+<div class="page active" id="page0">
+  <div class="date-row">
+    <input type="date" class="date-input" id="recordDate">
+    <span class="badge" id="savedBadge" style="display:none">記録済み</span>
+  </div>
+
+  <div class="section">
+    <div class="section-label">今日の肌状態</div>
+    <div class="condition-grid" id="conditionGrid"></div>
+    <div class="cond-badge" id="condBadge" style="display:none"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">症状の部位</div>
+    <div class="chips" id="partsChips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">気になった誘因</div>
+    <div class="chips" id="triggersChips"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="section" style="margin-bottom:0">
+      <div class="section-label">天気</div>
+      <div class="mini-options" id="weatherOpts"></div>
+    </div>
+    <div class="section" style="margin-bottom:0">
+      <div class="section-label">睡眠時間</div>
+      <div class="mini-options" id="sleepOpts"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">メモ（任意）</div>
+    <textarea class="memo-input" id="memoInput" placeholder="食事内容・気になること・特記事項など…"></textarea>
+  </div>
+
+  <button class="save-btn" id="saveBtn" onclick="saveRecord()" disabled>記録を保存する</button>
+</div>
+
+<!-- TAB 1: グラフ -->
+<div class="page" id="page1">
+  <div id="chartEmpty" class="empty" style="display:none">
+    <div class="empty-icon">📊</div>
+    <div class="empty-text">まだ記録がありません</div>
+    <div class="empty-sub">2日以上記録するとグラフが表示されます</div>
+  </div>
+  <div id="chartContent">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">平均状態</div>
+        <div class="stat-value" id="statAvg" style="color:#2d5a45">—<span class="stat-unit">/5</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">記録日数</div>
+        <div class="stat-value" id="statDays" style="color:#4a6fa5">—<span class="stat-unit">日</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">直近7日</div>
+        <div class="stat-value" id="statWeek" style="color:#c07a3a">—<span class="stat-unit">/5</span></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">肌状態の推移（直近30日）</div>
+      <canvas id="lineChart" height="160"></canvas>
+      <div class="chart-note">↑ 良い（1） ／ ↓ 悪い（5）</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">曜日別の平均状態</div>
+      <canvas id="weekdayChart" height="140"></canvas>
+      <div class="chart-note">値が大きいほど悪い傾向</div>
+    </div>
+    <div class="chart-card" id="triggerCard">
+      <div class="chart-title">誘因の頻度</div>
+      <canvas id="triggerChart" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: 振り返り -->
+<div class="page" id="page2">
+  <div id="reviewEmpty" class="empty" style="display:none">
+    <div class="empty-icon">📋</div>
+    <div class="empty-text">まだ記録がありません</div>
+    <div class="empty-sub">「記録する」タブから始めましょう</div>
+  </div>
+  <div id="reviewContent">
+    <div style="font-size:13px;font-weight:800;color:var(--green-dark);margin-bottom:12px">直近の記録</div>
+    <div id="recordList"></div>
+    <button class="export-btn" onclick="exportCSV()">📥 CSVでエクスポート（バックアップ）</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CONDS = [
+  { v:1, label:"とても良い", emoji:"😊", color:"#4ade80", bg:"#f0fdf4" },
+  { v:2, label:"良い",       emoji:"🙂", color:"#86efac", bg:"#f0fdf4" },
+  { v:3, label:"普通",       emoji:"😐", color:"#f59e0b", bg:"#fffbeb" },
+  { v:4, label:"悪い",       emoji:"😟", color:"#f97316", bg:"#fff7ed" },
+  { v:5, label:"とても悪い", emoji:"😣", color:"#ef4444", bg:"#fef2f2" },
+];
+const PARTS    = ["顔","首","腕","肘","お腹","背中","膝","足"];
+const TRIGGERS = ["食事","ストレス","睡眠不足","気温変化","乾燥","汗","花粉","ハウスダスト","衣類","化粧品"];
+const WEATHER  = ["晴れ ☀️","曇り ☁️","雨 🌧️","雪 ❄️"];
+const SLEEP    = ["6時間未満","6〜7時間","7〜8時間","8時間以上"];
+const WEEKDAYS = ["日","月","火","水","木","金","土"];
+const STORAGE  = "atopy-diary-v1";
+
+let records = [];
+let form = { date:"", condition:null, parts:[], triggers:[], weather:"", sleep:"", memo:"" };
+let charts = {};
+
+// ── Init ──
+function init() {
+  try { records = JSON.parse(localStorage.getItem(STORAGE)) || []; } catch { records = []; }
+  const today = new Date().toISOString().slice(0,10);
+  form.date = today;
+  buildUI();
+  loadFormForDate(today);
+  updateAll();
+}
+
+function buildUI() {
+  // Date
+  const di = document.getElementById("recordDate");
+  di.value = form.date;
+  di.max = new Date().toISOString().slice(0,10);
+  di.addEventListener("change", e => { form.date = e.target.value; loadFormForDate(e.target.value); });
+
+  // Conditions
+  const cg = document.getElementById("conditionGrid");
+  cg.innerHTML = "";
+  CONDS.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "cond-btn";
+    btn.id = "cond" + c.v;
+    btn.innerHTML = `<span class="emoji">${c.emoji}</span><span class="num">${c.v}</span>`;
+    btn.onclick = () => setCondition(c.v);
+    cg.appendChild(btn);
+  });
+
+  // Parts
+  buildChips("partsChips", PARTS, "parts", "selected-green");
+  // Triggers
+  buildChips("triggersChips", TRIGGERS, "triggers", "selected-amber");
+  // Weather
+  buildMiniOpts("weatherOpts", WEATHER, "weather");
+  // Sleep
+  buildMiniOpts("sleepOpts", SLEEP, "sleep");
+}
+
+function buildChips(containerId, items, field, cls) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  items.forEach(item => {
+    const btn = document.createElement("button");
+    btn.className = "chip";
+    btn.id = `chip_${field}_${item}`;
+    btn.textContent = item;
+    btn.onclick = () => toggleChip(field, item, cls, btn);
+    el.appendChild(btn);
+  });
+}
+
+function buildMiniOpts(containerId, items, field) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  items.forEach(item => {
+    const btn = document.createElement("button");
+    btn.className = "mini-btn";
+    btn.id = `mini_${field}_${item}`;
+    btn.textContent = item;
+    btn.onclick = () => setMiniOpt(field, item);
+    el.appendChild(btn);
+  });
+}
+
+function setCondition(v) {
+  form.condition = v;
+  CONDS.forEach(c => {
+    const btn = document.getElementById("cond" + c.v);
+    btn.style.borderColor = c.v === v ? c.color : "var(--border)";
+    btn.style.background = c.v === v ? c.bg : "var(--white)";
+  });
+  const cond = CONDS[v-1];
+  const badge = document.getElementById("condBadge");
+  badge.style.display = "block";
+  badge.textContent = `${cond.emoji} ${cond.label}`;
+  badge.style.color = cond.color;
+  badge.style.background = cond.bg;
+  document.getElementById("saveBtn").disabled = false;
+}
+
+function toggleChip(field, item, cls, btn) {
+  if (!form[field]) form[field] = [];
+  const idx = form[field].indexOf(item);
+  if (idx >= 0) { form[field].splice(idx,1); btn.className = "chip"; }
+  else { form[field].push(item); btn.className = `chip ${cls}`; }
+}
+
+function setMiniOpt(field, item) {
+  form[field] = item;
+  const all = document.querySelectorAll(`[id^="mini_${field}_"]`);
+  all.forEach(b => b.className = "mini-btn");
+  document.getElementById(`mini_${field}_${item}`).className = "mini-btn active";
+}
+
+function loadFormForDate(date) {
+  const rec = records.find(r => r.date === date);
+  // Reset form
+  form = { date, condition: null, parts:[], triggers:[], weather:"", sleep:"", memo:"" };
+  if (rec) Object.assign(form, rec);
+
+  // Reset UI
+  CONDS.forEach(c => {
+    const btn = document.getElementById("cond" + c.v);
+    btn.style.borderColor = "var(--border)";
+    btn.style.background = "var(--white)";
+  });
+  document.getElementById("condBadge").style.display = "none";
+  document.querySelectorAll(".chip").forEach(b => { b.className = "chip"; });
+  document.querySelectorAll(".mini-btn").forEach(b => { b.className = "mini-btn"; });
+  document.getElementById("memoInput").value = "";
+  document.getElementById("saveBtn").disabled = true;
+  document.getElementById("savedBadge").style.display = "none";
+
+  if (rec) {
+    if (rec.condition) setCondition(rec.condition);
+    (rec.parts||[]).forEach(p => {
+      const b = document.getElementById(`chip_parts_${p}`);
+      if (b) { b.className = "chip selected-green"; }
+    });
+    (rec.triggers||[]).forEach(t => {
+      const b = document.getElementById(`chip_triggers_${t}`);
+      if (b) { b.className = "chip selected-amber"; }
+    });
+    if (rec.weather) { const b = document.getElementById(`mini_weather_${rec.weather}`); if(b) b.className="mini-btn active"; }
+    if (rec.sleep)   { const b = document.getElementById(`mini_sleep_${rec.sleep}`);   if(b) b.className="mini-btn active"; }
+    document.getElementById("memoInput").value = rec.memo || "";
+    document.getElementById("savedBadge").style.display = "inline";
+  }
+}
+
+function saveRecord() {
+  if (!form.condition) return;
+  form.memo = document.getElementById("memoInput").value;
+  const existing = records.filter(r => r.date !== form.date);
+  records = [...existing, { ...form }].sort((a,b) => a.date.localeCompare(b.date));
+  localStorage.setItem(STORAGE, JSON.stringify(records));
+  document.getElementById("savedBadge").style.display = "inline";
+  const btn = document.getElementById("saveBtn");
+  btn.textContent = "✅ 保存しました"; btn.classList.add("saved");
+  setTimeout(() => { btn.textContent = "記録を保存する"; btn.classList.remove("saved"); }, 2000);
+  showToast("記録しました！");
+  updateAll();
+}
+
+// ── Charts ──
+function updateAll() {
+  document.getElementById("totalDays").textContent = records.length;
+
+  if (records.length < 2) {
+    document.getElementById("chartEmpty").style.display = "block";
+    document.getElementById("chartContent").style.display = "none";
+    document.getElementById("reviewEmpty").style.display = "block";
+    document.getElementById("reviewContent").style.display = "none";
+    return;
+  }
+  document.getElementById("chartEmpty").style.display = "none";
+  document.getElementById("chartContent").style.display = "block";
+  document.getElementById("reviewEmpty").style.display = "none";
+  document.getElementById("reviewContent").style.display = "block";
+
+  updateStats();
+  updateLineChart();
+  updateWeekdayChart();
+  updateTriggerChart();
+  updateRecordList();
+}
+
+function updateStats() {
+  const avg = records.reduce((s,r)=>s+r.condition,0)/records.length;
+  document.getElementById("statAvg").innerHTML = avg.toFixed(1)+'<span class="stat-unit">/5</span>';
+  document.getElementById("statDays").innerHTML = records.length+'<span class="stat-unit">日</span>';
+  const w7 = records.slice(-7);
+  const wavg = w7.reduce((s,r)=>s+r.condition,0)/w7.length;
+  document.getElementById("statWeek").innerHTML = wavg.toFixed(1)+'<span class="stat-unit">/5</span>';
+}
+
+function fmtDate(d) {
+  const dt = new Date(d);
+  return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+function weekday(d) { return WEEKDAYS[new Date(d).getDay()]; }
+
+function updateLineChart() {
+  const data = records.slice(-30);
+  const labels = data.map(r => fmtDate(r.date));
+  const values = data.map(r => r.condition);
+
+  if (charts.line) charts.line.destroy();
+  const ctx = document.getElementById("lineChart").getContext("2d");
+  charts.line = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: "#3d7a60",
+        backgroundColor: "rgba(61,122,96,0.08)",
+        borderWidth: 2.5,
+        pointBackgroundColor: "#3d7a60",
+        pointRadius: 3,
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { reverse: true, min:1, max:5, ticks:{ stepSize:1, font:{size:10} }, grid:{ color:"#f0ede8" } },
+        x: { ticks:{ font:{size:10}, maxTicksLimit:8 }, grid:{ color:"#f0ede8" } }
+      },
+      plugins: {
+        legend: { display:false },
+        tooltip: { callbacks: { label: ctx => CONDS[ctx.raw-1]?.label } }
+      },
+      animation: { duration: 600 }
+    }
+  });
+}
+
+function updateWeekdayChart() {
+  const days = ["月","火","水","木","金","土","日"];
+  const buckets = {};
+  records.forEach(r => {
+    const wd = weekday(r.date);
+    if (!buckets[wd]) buckets[wd] = [];
+    buckets[wd].push(r.condition);
+  });
+  const avgs = days.map(d => buckets[d] ? +(buckets[d].reduce((s,v)=>s+v,0)/buckets[d].length).toFixed(1) : null);
+  const colors = avgs.map(v => v === null ? "#ddd" : v <= 2 ? "#4ade80" : v <= 3 ? "#fbbf24" : "#ef4444");
+
+  if (charts.weekday) charts.weekday.destroy();
+  const ctx = document.getElementById("weekdayChart").getContext("2d");
+  charts.weekday = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: days,
+      datasets: [{
+        data: avgs,
+        backgroundColor: colors,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { reverse:true, min:1, max:5, ticks:{ stepSize:1, font:{size:10} }, grid:{ color:"#f0ede8" } },
+        x: { ticks:{ font:{size:11} }, grid:{ display:false } }
+      },
+      plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ctx.raw ? `${ctx.raw}/5` : "データなし" } } },
+      animation: { duration: 600 }
+    }
+  });
+}
+
+function updateTriggerChart() {
+  const freq = {};
+  records.forEach(r => (r.triggers||[]).forEach(t => { freq[t]=(freq[t]||0)+1; }));
+  const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  if (sorted.length === 0) { document.getElementById("triggerCard").style.display="none"; return; }
+  document.getElementById("triggerCard").style.display="block";
+
+  if (charts.trigger) charts.trigger.destroy();
+  const ctx = document.getElementById("triggerChart").getContext("2d");
+  charts.trigger = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: sorted.map(e=>e[0]),
+      datasets: [{ data: sorted.map(e=>e[1]), backgroundColor: "#c07a3a", borderRadius: 5 }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks:{ font:{size:10}, stepSize:1 }, grid:{ color:"#f0ede8" } },
+        y: { ticks:{ font:{size:11} }, grid:{ display:false } }
+      },
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.raw}回` } } },
+      animation: { duration: 600 }
+    }
+  });
+}
+
+function updateRecordList() {
+  const list = document.getElementById("recordList");
+  const last = records.slice(-10).reverse();
+  list.innerHTML = last.map(r => {
+    const c = CONDS[r.condition-1];
+    const parts = (r.parts||[]).join("・");
+    const trigs = (r.triggers||[]).join("・");
+    return `<div class="record-item">
+      <div class="rec-date">
+        <div class="rec-day">${weekday(r.date)}</div>
+        <div class="rec-datenum">${fmtDate(r.date)}</div>
+      </div>
+      <div class="rec-emoji">${c.emoji}</div>
+      <div class="rec-detail">
+        <div class="rec-status" style="color:${c.color}">${c.label}</div>
+        ${parts ? `<div class="rec-tags">部位: ${parts}</div>` : ""}
+        ${trigs ? `<div class="rec-tags">誘因: ${trigs}</div>` : ""}
+        ${r.memo ? `<div class="rec-memo">${r.memo}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Tabs ──
+let currentTab = 0;
+function switchTab(n) {
+  document.querySelectorAll(".tab").forEach((t,i) => t.classList.toggle("active", i===n));
+  document.querySelectorAll(".page").forEach((p,i) => p.classList.toggle("active", i===n));
+  if (n===1 && records.length >= 2) {
+    setTimeout(() => { updateLineChart(); updateWeekdayChart(); updateTriggerChart(); }, 50);
+  }
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+// ── Export CSV ──
+function exportCSV() {
+  if (records.length === 0) { showToast("記録がありません"); return; }
+  const header = "日付,曜日,状態(1=良〜5=悪),ラベル,部位,誘因,天気,睡眠,メモ";
+  const rows = records.map(r => {
+    const c = CONDS[r.condition-1];
+    return [
+      r.date, weekday(r.date), r.condition, c?.label||"",
+      (r.parts||[]).join("|"), (r.triggers||[]).join("|"),
+      r.weather||"", r.sleep||"",
+      `"${(r.memo||"").replace(/"/g,'""')}"`
+    ].join(",");
+  });
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob(["\uFEFF"+csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "atopy-diary.csv"; a.click();
+  URL.revokeObjectURL(url);
+  showToast("CSVをダウンロードしました");
+}
+
+init();
+</script>
+</body>
+</html>
