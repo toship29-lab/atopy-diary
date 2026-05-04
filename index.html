@@ -101,10 +101,45 @@
   .loading { text-align: center; padding: 40px 20px; color: var(--text-soft); font-size: 13px; }
   .loading-spinner { font-size: 32px; display: block; margin-bottom: 10px; animation: spin 1.5s linear infinite; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* ── パスワード画面 ── */
+  .lock-screen {
+    position: fixed; inset: 0; background: linear-gradient(160deg, #e8f5ee 0%, #fff9f2 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; padding: 40px 32px;
+  }
+  .lock-icon { font-size: 56px; margin-bottom: 16px; }
+  .lock-title { font-size: 22px; font-weight: 800; color: var(--green-dark); margin-bottom: 6px; }
+  .lock-sub { font-size: 13px; color: var(--text-soft); margin-bottom: 32px; }
+  .lock-input {
+    width: 100%; padding: 14px 18px; border-radius: 14px; border: 2px solid var(--border);
+    font-size: 18px; text-align: center; letter-spacing: 4px; outline: none;
+    font-family: inherit; background: var(--white); color: var(--text); margin-bottom: 14px;
+  }
+  .lock-input:focus { border-color: var(--green-mid); }
+  .lock-btn {
+    width: 100%; padding: 15px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+    color: #fff; font-size: 16px; font-weight: 800; cursor: pointer;
+    font-family: inherit; box-shadow: 0 4px 16px rgba(45,90,69,0.28);
+  }
+  .lock-error { font-size: 13px; color: #ef4444; margin-top: 12px; min-height: 20px; }
 </style>
 </head>
 <body>
 
+<!-- パスワード画面 -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-icon">🌿</div>
+  <div class="lock-title">アトピー日記</div>
+  <div class="lock-sub">パスワードを入力してください</div>
+  <input type="password" class="lock-input" id="pwInput" placeholder="••••••••"
+    onkeydown="if(event.key==='Enter')checkPassword()">
+  <button class="lock-btn" onclick="checkPassword()">ひらく</button>
+  <div class="lock-error" id="lockError"></div>
+</div>
+
+<div id="appBody" style="display:none">
 <div class="header">
   <div class="header-top">
     <div class="header-icon">🌿</div>
@@ -206,6 +241,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+</div><!-- /appBody -->
 
 <script>
 // ★★★ここを自分のURLに変える★★★
@@ -499,7 +535,35 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove("show"), 2200);
 }
 
-init();
+// ── パスワード ──
+const PASSWORD = "toship29";
+const AUTH_KEY = "atopy-auth";
+
+function checkPassword() {
+  const input = document.getElementById("pwInput").value;
+  if (input === PASSWORD) {
+    sessionStorage.setItem(AUTH_KEY, "ok");
+    document.getElementById("lockScreen").style.display = "none";
+    document.getElementById("appBody").style.display = "block";
+    init();
+  } else {
+    const err = document.getElementById("lockError");
+    err.textContent = "パスワードが違います";
+    document.getElementById("pwInput").value = "";
+    document.getElementById("pwInput").focus();
+    setTimeout(() => err.textContent = "", 2000);
+  }
+}
+
+// すでに認証済みならスキップ
+if (sessionStorage.getItem(AUTH_KEY) === "ok") {
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("appBody").style.display = "block";
+  init();
+} else {
+  document.getElementById("pwInput").focus();
+}
+
 </script>
 </body>
 </html>
